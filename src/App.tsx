@@ -1,24 +1,54 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect } from "react";
+import logo from "./logo.svg";
+import "./App.css";
+import { useQuery, useLazyQuery } from "@apollo/client";
+import { GET_ALL_ITEMS } from "./queries";
+import { Sneakers, Items } from "./interfaces";
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import useDebounceSearch from "./hooks/useDebounceSearch";
 
 function App() {
+  const [items, setItems] = React.useState([]);
+  const [cartItems, setCartItems] = React.useState([]);
+  const [favorites, setFavorites] = React.useState([]);
+  const [searchValue, setSearchValue] = React.useState("");
+  const [cartOpened, setCartOpened] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  const debouncedSearch = useDebounceSearch(searchValue);
+
+  const [getAllItems, { data, error, loading }] = useLazyQuery<Items>(GET_ALL_ITEMS, {
+    variables: { searchValue: `%${debouncedSearch}%` }
+  });
+
+  const onChangeSearchInput = (value: string) => {
+    setSearchValue(value);
+  };
+
+  useEffect(() => {
+    if (!data) {
+      getAllItems();
+    }
+    if (debouncedSearch) {
+      getAllItems();
+    }
+  }, [debouncedSearch]);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>{error.message}</div>;
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <Home
+        isLoading={loading}
+        onAddToCart={() => {}}
+        onAddToFavorite={() => {}}
+        items={data?.items || []}
+        onChangeSearchInput={onChangeSearchInput}
+        searchValue={searchValue}
+        setSearchValue={setSearchValue}
+      />
     </div>
   );
 }
